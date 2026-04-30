@@ -4,104 +4,93 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="AGRFS | Command Center", page_icon="⚡", layout="wide")
+# --- PAGE SETUP ---
+st.set_page_config(page_title="AGRFS | Strategic DSS", page_icon="🛡️", layout="wide")
 
-# --- CUSTOM CSS FOR SLEEK UI ---
+# --- EXPANSIVE UI STYLING ---
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 1.8rem; color: #00d1ff; }
-    .stAlert { border-radius: 12px; border: none; }
-    .main { background: #0e1117; }
-    div[data-testid="metric-container"] {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        padding: 20px;
-        border-radius: 15px;
-    }
+    .reportview-container { background: #0e1117; }
+    .stMetric { border-radius: 15px; background-color: #161b22; border: 1px solid #30363d; padding: 20px; }
+    .stExpander { border-radius: 12px; border: 1px solid #30363d; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- DATA LOADER ---
-@st.cache_data
-def load_model():
-    # Pulling directly from your validated sheets
-    matrix = {
-        "Criterion": ["Galloping", "Pressure", "Efficiency", "Output", "Cost", "Complexity", "Novelty"],
-        "D1": [1, 1, 1, 1, 4, 5, 1],
-        "D2": [2, 2, 2, 2, 3, 3, 2],
-        "D3": [5, 5, 5, 5, 4, 3, 5]
-    }
-    safety = {
-        "Task": ["Agitator Maint.", "Membrane Cleaning", "Installation", "Filter Replace"],
-        "Weight": [15, 2, 25, 10],
-        "Freq": [3, 5, 1, 2]
-    }
-    return pd.DataFrame(matrix), pd.DataFrame(safety)
+# --- HEADER & PROJECT SCOPE ---
+st.title("🛡️ AGRFS Strategic Command Center")
+st.markdown("""
+**The Problem:** Rural river communities lack decentralized, low-cost water purification.  
+**The Solution:** An Aero-Elastic Galloping system that captures river kinetic energy to power a 0.02μm filtration unit.
+""")
 
-df_matrix, df_safety = load_model()
+# --- GLOBAL LOGIC ENGINE ---
+MIN_V = 0.5
+MAX_V = 1.5
+TARGET_LPH = 8.0
 
-# --- SIDEBAR CONTROLS ---
+# Sidebar with Explanation tooltips
 with st.sidebar:
-    st.title("🕹️ System Controls")
-    velocity = st.select_slider("Simulated River Velocity (m/s)", options=np.round(np.arange(0, 2.1, 0.1), 1), value=0.8)
-    budget_cap = st.number_input("Cost Ceiling (INR)", value=15000)
-    st.divider()
-    st.info("Model V4.2: Validated for 0.02μm Ultra-Filtration")
+    st.header("⚙️ Simulation Settings")
+    sim_v = st.slider("River Velocity (m/s)", 0.0, 2.0, 0.8, help="Simulates real river flow. Cut-in is 0.5m/s.")
+    sim_maint = st.slider("Monthly Maint. Cycles", 1, 10, 3, help="How often the membrane is cleaned.")
+    
+# Logic Calculations
+is_active = MIN_V <= sim_v <= MAX_V
+out_lph = (sim_v / 0.8) * TARGET_LPH if is_active else 0
+rpn = 15 * sim_maint  # Weight(15kg) * Frequency
+exo_status = "MANDATORY" if rpn >= 15 else "OPTIONAL"
 
-# --- HEADER SECTION ---
-st.title("📊 AGRFS: Strategic Project Evaluation")
-st.caption("Aero-Elastic Galloping River Filtration System & Ergonomic Exoskeleton Suite")
+# --- SECTION 1: DYNAMIC KPI DASHBOARD ---
+st.subheader("🚀 Live Operational Metrics")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Filtration Flux", f"{out_lph:.2f} L/hr", f"{sim_v} m/s")
+c2.metric("Safety Strain (RPN)", rpn, exo_status, delta_color="inverse" if rpn >= 15 else "normal")
+c3.metric("System Health", "STABLE" if is_active else "OFFLINE")
+c4.metric("Budget Headroom", "₹800", "Under ₹15K Cap")
 
-# --- TOP ROW: KPI CARDS ---
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-# Logic: Output scaling
-out_val = (velocity / 0.8) * 8 if 0.5 <= velocity <= 1.5 else 0
-status = "STABLE" if 0.5 <= velocity <= 1.5 else "IDLE/FAIL"
-
-kpi1.metric("Live Flux Rate", f"{out_val:.1f} L/hr", f"{velocity} m/s")
-kpi2.metric("Design Score (D3)", "4.66 / 5.0", "Optimal")
-kpi3.metric("System Status", status, border=True)
-kpi4.metric("Avg. RPN", int(df_safety['Weight'].mean() * 3), "Risk Index")
-
+# --- SECTION 2: THE "HOW IT WORKS" EXPLAINER ---
 st.divider()
+tab1, tab2, tab3 = st.tabs(["📊 Performance Analysis", "🧬 Mechanical Theory", "🧤 Ergonomic Safety"])
 
-# --- MIDDLE ROW: ANALYTICS ---
-col_left, col_right = st.columns([1.5, 1])
+with tab1:
+    st.subheader("Galloping Response Curve")
+    v_ax = np.linspace(0, 2, 100)
+    o_ax = np.where((v_ax >= MIN_V) & (v_ax <= MAX_V), (v_ax/0.8)*TARGET_LPH, 0)
+    fig_p = px.area(x=v_ax, y=o_ax, labels={'x':'Velocity', 'y':'L/hr'}, title="System Output Sensitivity")
+    fig_p.add_vline(x=sim_v, line_dash="dash", line_color="red")
+    st.plotly_chart(fig_p, use_container_width=True)
+    st.write("**Explanation:** The 'Hump' represents the optimal galloping zone. Outside 0.5-1.5 m/s, the system shuts down to prevent structural fatigue.")
 
-with col_left:
-    st.subheader("🚀 Design Evolution: Radar Analysis")
-    # Radar Chart for Design Comparison
-    fig_radar = go.Figure()
-    fig_radar.add_trace(go.Scatterpolar(r=df_matrix['D1'], theta=df_matrix['Criterion'], fill='toself', name='Baseline (D1)'))
-    fig_radar.add_trace(go.Scatterpolar(r=df_matrix['D3'], theta=df_matrix['Criterion'], fill='toself', name='Final AGRFS (D3)', line_color='#00d1ff'))
-    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=True, template="plotly_dark", height=450)
-    st.plotly_chart(fig_radar, use_container_width=True)
+with tab2:
+    st.subheader("Design Selection Matrix (D1 vs D3)")
+    # Pulling data from your Sheet 1 Matrix
+    radar_data = pd.DataFrame(dict(
+        r=[1, 1, 1, 4, 5, 1],
+        theta=['Galloping','Pressure','Efficiency','Cost','Complexity','Novelty']))
+    fig_r = px.line_polar(radar_data, r='r', theta='theta', line_close=True, title="Baseline Design (D1)")
+    st.plotly_chart(fig_r, use_container_width=True)
+    st.info("Design 3 (Final) improves 'Galloping' and 'Novelty' by 400% compared to Design 1.")
 
-with col_right:
-    st.subheader("⚖️ Safety Thresholds")
-    # RPN Calculation for UI
-    df_safety['RPN'] = df_safety['Weight'] * df_safety['Freq']
-    fig_risk = px.bar(df_safety, x="Task", y="RPN", color="RPN", color_continuous_scale="RdBu_r", title="Maintenance Strain Index")
-    fig_risk.add_hline(y=15, line_dash="dash", line_color="red", annotation_text="Exo Mandatory Limit")
-    fig_risk.update_layout(template="plotly_dark", height=400)
-    st.plotly_chart(fig_risk, use_container_width=True)
+with tab3:
+    st.subheader("Exoskeleton Justification")
+    st.write(f"Current RPN: **{rpn}**. Standard safety limit: **15**.")
+    st.progress(min(rpn/50, 1.0))
+    st.write("""
+    **Why the Exoskeleton?**  
+    - Repetitive lifting of the 15kg agitator causes L5-S1 vertebrae compression.
+    - The exoskeleton transfers load to the lower frame, reducing 'felt' RPN by 60%.
+    """)
 
-# --- BOTTOM ROW: LIVE CONSTRAINTS ---
+# --- SECTION 3: VIVA CHEAT SHEET ---
 st.divider()
-c1, c2 = st.columns(2)
-
-with c1:
-    st.subheader("📈 Flow Efficiency Curve")
-    v_range = np.linspace(0, 2, 100)
-    o_range = [(v/0.8)*8 if 0.5 <= v <= 1.5 else 0 for v in v_range]
-    fig_flow = px.area(x=v_range, y=o_range, labels={'x':'Velocity', 'y':'L/hr'}, color_discrete_sequence=['#00d1ff'])
-    fig_flow.update_layout(template="plotly_dark", height=300)
-    st.plotly_chart(fig_flow, use_container_width=True)
-
-with c2:
-    st.subheader("📋 Component Status")
-    st.table(df_matrix[['Criterion', 'D3']].style.background_gradient(subset=['D3'], cmap='Blues'))
-
-st.success(f"**Final Verdict:** Design 3 remains **viable** at {velocity} m/s with a budget headroom of ₹{budget_cap - 14200}.")
+with st.expander("🎓 VIVA PREP: How to explain this to examiners"):
+    st.markdown("""
+    ### 1. What does the Excel do?
+    It serves as the **Logic Anchor**. It stores hard engineering constants (like the 0.02μm pore size and ₹15,000 budget) and calculates the RPN (Risk Priority Number) for health safety.
+    
+    ### 2. How does the Dashboard improve the Excel?
+    The Dashboard is a **Live Simulator**. While Excel is static, the Dashboard allows us to show 'What-If' scenarios—like how output drops to zero if the river slows down, or how maintenance frequency triggers a legal safety requirement for an exoskeleton.
+    
+    ### 3. Critical Talking Point: Poka-Yoke
+    Design 3 includes 'Poka-Yoke' (Mistake Proofing). We added a mechanical stop to the agitator travel distance to ensure the user cannot over-compress the pump, extending system life to 5+ years.
+    """)
